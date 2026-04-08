@@ -3,11 +3,9 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.graph_objects as go
+from tensorflow.keras.models import load_model
 
-
-# ================= LOAD MODEL =================
-
-model = joblib.load("real_project/model/fraud_model.pkl")
+model = load_model("real_project/model/fraud_model.h5")
 scaler = joblib.load("real_project/model/scaler.pkl")
 pca = joblib.load("real_project/model/pca.pkl")
 
@@ -95,4 +93,3 @@ if st.button("🔍 Check Fraud"):
 
     st.plotly_chart(fig)
 
-    
