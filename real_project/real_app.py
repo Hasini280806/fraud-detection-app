@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from tensorflow.keras.models import load_model
 
 # ================= LOAD MODEL =================
+
 model = load_model("real_project/model/fraud_model.h5")
 scaler = joblib.load("real_project/model/scaler.pkl")
 pca = joblib.load("real_project/model/pca.pkl")
