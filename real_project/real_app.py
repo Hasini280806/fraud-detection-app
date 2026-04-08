@@ -3,19 +3,21 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.graph_objects as go
+from tensorflow.keras.models import load_model
 
-# ================== LOAD MODEL ==================
-model = joblib.load("real_project/model/fraud_model.pkl")
+# ================= LOAD MODEL =================
+model = load_model("real_project/model/fraud_model.h5")
 scaler = joblib.load("real_project/model/scaler.pkl")
 pca = joblib.load("real_project/model/pca.pkl")
 
-# ================== PAGE CONFIG ==================
+# ================= PAGE CONFIG =================
 st.set_page_config(layout="wide")
 
-# ================== STYLE ==================
+# ================= STYLE =================
 st.markdown("""
 <style>
 h1 {text-align: center;}
+
 .stButton > button {
     display: block;
     margin: 20px auto;
@@ -27,69 +29,67 @@ h1 {text-align: center;}
 </style>
 """, unsafe_allow_html=True)
 
-# ================== TITLE ==================
+# ================= TITLE =================
 st.title("💳 Real-Time Fraud Detection System")
 
-# ================== SIDEBAR INPUT ==================
-st.sidebar.header("Transaction Input")
+# ================= METRICS =================
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Transactions", "10,000+")
+col2.metric("Fraud Cases", "250")
+col3.metric("Detection Accuracy", "98%")
 
-amount = st.sidebar.number_input("Amount", value=100.0)
-time = st.sidebar.number_input("Time (seconds)", value=10000.0)
-transaction_type = st.sidebar.selectbox("Transaction Type", [0, 1, 2, 3, 4])
+st.markdown("---")
 
-location_risk = st.sidebar.slider("Location Risk", 0, 5, 2)
-device_risk = st.sidebar.slider("Device Risk", 0, 5, 1)
-past_transactions = st.sidebar.slider("Past Transactions", 0, 10, 3)
+# ================= INPUT SECTION =================
+st.subheader("Enter Transaction Details")
 
-# ================== PREPARE INPUT ==================
-input_data = np.array([[amount, time, transaction_type,
-                        location_risk, device_risk, past_transactions]])
+col1, col2 = st.columns(2)
 
-input_scaled = scaler.transform(input_data)
-input_pca = pca.transform(input_scaled)
+with col1:
+    amount = st.number_input("Amount", value=500.0)
+    oldbalanceOrg = st.number_input("Old Balance (Sender)", value=1000.0)
+    newbalanceOrig = st.number_input("New Balance (Sender)", value=500.0)
 
-# ================== BUTTON ==================
-detect = st.button("🚀 Detect Fraud")
+with col2:
+    oldbalanceDest = st.number_input("Old Balance (Receiver)", value=0.0)
+    newbalanceDest = st.number_input("New Balance (Receiver)", value=500.0)
+    transaction_type = st.selectbox("Transaction Type", [0, 1])  # 0=normal,1=suspicious
 
-# ================== PREDICTION ==================
-if detect:
-    prob = float(model.predict(input_pca)[0])
+time = st.number_input("Transaction Time", value=10000)
 
-    if prob > 0.5:
-        st.error(f"🚨 Fraud Detected | Confidence: {prob:.2f}")
+# ================= PREDICT BUTTON =================
+if st.button("🔍 Check Fraud"):
+
+    # Create input array
+    input_data = np.array([[time, transaction_type, amount,
+                            oldbalanceOrg, newbalanceOrig,
+                            oldbalanceDest, newbalanceDest]])
+
+    # Scale
+    scaled_data = scaler.transform(input_data)
+
+    # PCA
+    pca_data = pca.transform(scaled_data)
+
+    # Predict
+    prediction = model.predict(pca_data)
+    result = int(prediction[0][0] > 0.5)
+
+    # ================= RESULT =================
+    if result == 1:
+        st.error("🚨 Fraud Transaction Detected!")
     else:
-        st.success(f"✅ Legitimate Transaction | Confidence: {1 - prob:.2f}")
+        st.success("✅ Legitimate Transaction")
 
-    # ================== GAUGE ==================
+    # ================= GAUGE =================
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=prob,
-        title={'text': "Fraud Probability"},
-        gauge={'axis': {'range': [0, 1]}}
+        value=prediction[0][0] * 100,
+        title={'text': "Fraud Probability (%)"},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "red" if result == 1 else "green"},
+        }
     ))
 
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # ================== FEATURE IMPORTANCE ==================
-    st.subheader("📊 Feature Importance")
-
-    features = ["Amount", "Time", "Type", "Location", "Device", "History"]
-    values = input_data[0]
-
-    fig_bar = go.Figure([go.Bar(
-        x=values,
-        y=features,
-        orientation='h'
-    )])
-
-    fig_bar.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)"
-    )
-
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig)
