@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
@@ -30,7 +30,7 @@ h1 {text-align: center;}
 # ================== TITLE ==================
 st.title("💳 Real-Time Fraud Detection System")
 
-# ================== INPUT ==================
+# ================== SIDEBAR INPUT ==================
 st.sidebar.header("Transaction Input")
 
 amount = st.sidebar.number_input("Amount", value=100.0)
@@ -45,7 +45,6 @@ past_transactions = st.sidebar.slider("Past Transactions", 0, 10, 3)
 input_data = np.array([[amount, time, transaction_type,
                         location_risk, device_risk, past_transactions]])
 
-# Scale + PCA
 input_scaled = scaler.transform(input_data)
 input_pca = pca.transform(input_scaled)
 
@@ -54,13 +53,12 @@ detect = st.button("🚀 Detect Fraud")
 
 # ================== PREDICTION ==================
 if detect:
-    prediction = model.predict(input_pca)
-    prob = float(prediction[0])
+    prob = float(model.predict(input_pca)[0])
 
     if prob > 0.5:
         st.error(f"🚨 Fraud Detected | Confidence: {prob:.2f}")
     else:
-        st.success(f"✅ Legitimate Transaction | Confidence: {1-prob:.2f}")
+        st.success(f"✅ Legitimate Transaction | Confidence: {1 - prob:.2f}")
 
     # ================== GAUGE ==================
     fig = go.Figure(go.Indicator(
@@ -94,7 +92,4 @@ if detect:
         plot_bgcolor="rgba(0,0,0,0)"
     )
 
-    st.plotly_chart(fig_bar, use_container_width=True)   
-
-
-
+    st.plotly_chart(fig_bar, use_container_width=True)
